@@ -11,9 +11,9 @@ These scripts are currently designed to be run once at commissioning time - they
 * Make a new repositiory for containing your deployment
   * Change to the directory you want to contain the new deployment repo (not including the new repo dir)
   * Run `deployments/new-deployment-repo.sh`
-    * Fetched the script: `wget -O new-deployment-repo.sh https://raw.githubusercontent.com/cs2dsb/rust-web-deploy-scripts/main/deployments/new-deployment-repo.sh`
-    * Make it executable `chmod +x ./new-deployment-repo.sh`
-    * Run it with the new deployment/project name `./new-deployment-repo.sh my-amazing-project-deployment`
+    * Fetched the script: `wget -O new-deployment-repository.sh https://raw.githubusercontent.com/cs2dsb/rust-web-deploy-scripts/main/deployments/new-deployment-repository.sh`
+    * Make it executable `chmod +x ./new-deployment-repository.sh`
+    * Run it with the new deployment/project name `./new-deployment-repository.sh my-amazing-project-deployment`
     * It will:
       * create the dir under the current directory
       * initialize a git repo there
@@ -66,7 +66,7 @@ Variables can be set as simple VARIABLE=value statements in `roles/variables` an
 
 ##### Putting it LIVE
 
-By default the Let's Encrypt staging area is use which has extemely high limits and issues untrusted certs for dev purposes.
+By default the Let's Encrypt staging area is used which has extemely high limits and issues untrusted certs for dev purposes.
 
 To switch over to issuing live certs add ACME_TEST=false to `roles/variables`.
 
