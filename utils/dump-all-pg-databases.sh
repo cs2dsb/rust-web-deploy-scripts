@@ -15,8 +15,7 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-cd "${BASH_SOURCE%/*}"
-source "./variables.sh"
+source "${BASH_SOURCE%/*}/variables.sh"
 
 sudo -u $POSTGRES_USER \
     psql -v "ON_ERROR_STOP=1" --tuples-only -P format=unaligned -c \

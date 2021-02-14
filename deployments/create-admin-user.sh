@@ -29,8 +29,7 @@ if [ "$USERNAME" = "" ]; then
     USERNAME=$USER
 fi
 
-rsync -a --info=progress2 "${BASH_SOURCE%/*}/../setup/" $USERNAME@$ADDRESS:/home/$USERNAME/deployment
-rsync -aL --info=progress2 "${BASH_SOURCE%/*}/../utils" $USERNAME@$ADDRESS:/home/$USERNAME/deployment
-rsync -a --info=progress2 $DEPLOYMENT/ $USERNAME@$ADDRESS:/home/$USERNAME/deployment
+rsync -a --info=progress2 "${BASH_SOURCE%/*}/../setup/" $USERNAME@$ADDRESS:"~/deployment"
+rsync -a --info=progress2 $DEPLOYMENT/roles/ $USERNAME@$ADDRESS:"~/deployment/roles"
 
-ssh $USERNAME@$ADDRESS "sudo -i sh -c \"cd /home/$USERNAME/deployment/roles; ./dogsbody.sh\""
+ssh $USERNAME@$ADDRESS "sudo ~/deployment/roles/admin-user-creation.sh"

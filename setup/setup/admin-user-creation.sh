@@ -31,7 +31,7 @@ fi
 
 # Create the user and add to sudo group
 if ! id "${USER_ACCOUNT}" &>/dev/null; then
-    adduser --disabled-password ${USER_ACCOUNT} &>/dev/null
+    adduser --disabled-password --gecos "" ${USER_ACCOUNT} &>/dev/null
     usermod -aG sudo ${USER_ACCOUNT}
 
     # Allow NOPASSWD

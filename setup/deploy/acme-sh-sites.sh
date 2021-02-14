@@ -55,4 +55,8 @@ while IFS="" read -r line || [ -n "$line" ]; do
     DEPLOY_HAPROXY_PEM_PATH="$HAPROXY_CERTS" DEPLOY_HAPROXY_RELOAD="/usr/sbin/service haproxy restart" \
     "$ACMESH_BIN" -d $host --deploy --deploy-hook haproxy $DEBUG
 
+    # Because we are restarting the service on each deploy systemd can failed and return an error
+    # this clears the fail counter to prevent that
+    systemctl reset-failed haproxy.service
+
 done <<< `sed '/^$/d' "../config/haproxy/sites.lst" | sed '/^#/d'` # seds remove comments and empty lines
