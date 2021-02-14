@@ -59,7 +59,7 @@ Configuration files, templates and other deployment artifacts
 
 * postgres
 
-    * `*.sql` - sql files used to create the postgres databases. Typically created by pgdump with the -C option. The name of the file will be used to check if the database already exsits so they must be named <database name>.sql.
+    * `*.sql` - sql files used to create the postgres databases. Typically created by pg_dump with the -C option. The name of the file will be used to check if the database already exists so they must be named <database name>.sql.
 
     * `roles.lst` - list of users/roles to create. These are created before attempting to execute the sql files.
 
@@ -75,7 +75,7 @@ Configuration files, templates and other deployment artifacts
 
 #### deploy
 
-   * `acme-sh-sites.sh` - requests certificates from Let's Encrypt for each domain defined in `sites.lst` and, assuming they are issued, configures acme.sh to deploy these certs to the haproxy cert folder. `ACME_TEST` variable in `variables.sh`determines if the staging or live servers are used.
+   * `acme-sh-sites.sh` - requests certificates from Let's Encrypt for each domain defined in `sites.lst` and, assuming they are issued, configures acme.sh to deploy these certs to the haproxy cert folder. `ACME_TEST` variable in `variables.sh` determines if the staging or live servers are used.
     
    * `allow-port.sh` - allows a port through the firewall (not currently used).
 
@@ -83,7 +83,7 @@ Configuration files, templates and other deployment artifacts
 
    * `haproxy-global.sh` - uses `haproxy.cfg.template` and `sites.lst` to create and install the haproxy config (see those files above for more info).
 
-   * `postgres-data.sh` - creates users/roles defined in `roles.lst` then creates databases for each `<database name>.sql` if the database doesnt' already exist.
+   * `postgres-data.sh` - creates users/roles defined in `roles.lst` then creates databases for each `<database name>.sql` if the database doesn't already exist.
 
    * `systemd-service.sh` - uses `system.template` to create a systemd service file for each user app. Replaces the service name, working directory, bin and user account then moves the service file to the app working directory before installing and starting the service.
 
@@ -119,11 +119,11 @@ Configuration files, templates and other deployment artifacts
   
   * `golang.sh` - downloads the latest stable golang release and installs it under /usr/local/go.
   
-  * `haproxy.sh` - adds the offical haproxy ppa and installs haproxy. If haproxy wasn't previously installed it also overwrites the default config with `haproxy-acme-only.cfg`
+  * `haproxy.sh` - adds the official haproxy ppa and installs haproxy. If haproxy wasn't previously installed it also overwrites the default config with `haproxy-acme-only.cfg`
   
   * `hostname.sh` - changes the machines hostname, updates /etc/hosts and reboots. Does nothing if the hostname is unchanged. This must be run last because many things break if you change the hostname and don't reboot.
   
-  * `postgres.sh` - adds the offical apt repo for postgres and installs posgres.
+  * `postgres.sh` - adds the official apt repo for postgres and installs postgres.
   
   * `rust.sh` - downloads and installs the version of rust specified by RUST_VERSION and RUST_TARGET.
   
