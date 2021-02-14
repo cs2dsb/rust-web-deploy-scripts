@@ -41,7 +41,7 @@ OUT_PEM="`pwd`/$TARGET/config/haproxy/dhparams.pem"
 if [ "$BLANK" = true ] || ! test -f "$BASE_PEM"; then
     mkdir -p "$TARGET"
     cp -r "$BASE/config" "$TARGET/config"
-    sudo sh -c "OUT_OVERRIDE=\"$OUT_PEM\" \"../setup/deploy/haproxy-generate-dhparams.sh\" && chown $USER:$USER \"$TARGET/config/haproxy/dhparams.pem\""
+    "../setup/deploy/generate-dhparams.sh" "$OUT_PEM"
 else
     cp -r "$BASE" "$TARGET"
 fi

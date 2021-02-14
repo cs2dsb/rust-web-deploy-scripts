@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-#
-#
-
 # Exit when any command fails
 set -o errexit
 
@@ -12,8 +9,14 @@ set -o nounset
 # Exit when a piped command returns a non-zero exit code
 set -o pipefail
 
-#set -x
 
+DEPLOYMENT=${1:-}
+
+# Check the deployment provided isn't empty
+if [ "$DEPLOYMENT" = "" ] || ! test -d "$DEPLOYMENT" ; then
+    echo "vagrant-recreate-and-deploy requires 1 argument (DEPLOYMENT)" 1>&2
+    exit 1
+fi
 
 vagrant destroy -f
 vagrant up --provider=virtualbox
@@ -45,4 +48,4 @@ do
     sleep 5
 done
 
-deployments/deploy-test-deployment.sh $ADDRESS
+deployments/deploy.sh $ADDRESS "$DEPLOYMENT"

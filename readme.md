@@ -6,11 +6,71 @@ These scripts are currently designed to be run once at commissioning time - they
 
 ## Getting started
 
-// This section is TODO
+### Making a deployment repo/project
 
-* Create git repo from template
-* Create deployment skeleton
-* Update x, y, z
+* Make a new repositiory for containing your deployment
+  * Change to the directory you want to contain the new deployment repo (not including the new repo dir)
+  * Run `deployments/new-deployment-repo.sh`
+    * Fetched the script: `wget -O new-deployment-repo.sh https://raw.githubusercontent.com/cs2dsb/rust-web-deploy-scripts/main/deployments/new-deployment-repo.sh`
+    * Make it executable `chmod +x ./new-deployment-repo.sh`
+    * Run it with the new deployment/project name `./new-deployment-repo.sh my-amazing-project-deployment`
+    * It will:
+      * create the dir under the current directory
+      * initialize a git repo there
+      * create a skeleton deployment for the current date
+      * create new wireguard keys
+      * create a new dhparams.pem
+* Update user details in `deployments/<date>/roles/variables` to reflect the user account and public ssh key you want to use to deploy to the target machine
+* Add the list of sites you want to serve in `deployments/<date>/config/haproxy/sites.lst`
+* Add user-apps
+  * Add a folder for each app under `deployments/<date>/apps`
+  * Add the deployment steps for each app to `deployments/<date>/user-apps.sh`
+* If using postgres databases
+  * Add roles you need to `deployments/<date>/config/postgres/roles.lst`
+  * Create `<database name>.sql` files in `deployments/<date>/config/postgres` for each database you want to deploy. See `dump-all-pg-databases.sh` for a method of migrating databases
+
+### Testing locally with vagrant
+
+* To test Let's Encrypt certificate functions
+  * Add sites sites you want to test to `deployments/<date>/config/haproxy/sites.lst`
+  * Map ports 80 and 443 to the public adapter vagrant creates. The mac address for this can be found in `Vagrantfile`
+* Run `vagrant-recreate-and-deploy-test.sh` providing the path to the deployment folder you want to test (e.g. `deployments/<date>` in your deployment repo/project)
+  * Note: this only works with VirtualBox as the provider due to the extra network steps the script performs. Check out what the script is doing and recreate this with another provider
+  * This will destroy the existing vagrant vm if there is one
+  * Create a new VM
+  * Grab the IP address using `vagrant ssh`
+  * Delete the NAT adapter config on the VM
+  * Shut the VM down
+  * Disable the NAT adapter using VBoxManage
+  * Start the machine
+  * Delete any entries in `~/.ssh/known_hosts` for the VM IP
+  * Connect via SSH and accept the host key
+  * Run `deployments/deploy.sh` passing $1 as the deployment and the IP address as the address
+
+### Customizing your deployment
+
+Any file from `setup` can be copied into your deployment and customised as you see fit. `deploy.sh` uses rsync to copy `setup` first then overwrites it with your deployment folder.
+
+#### Disabling steps
+
+This can be useful to skip slow tasks that you don't need (e.g. the rust dev chain and diesel_cli parts take a long time to install and compile on a slow VPS)
+
+* Copy `setup/roles/dogsbody.sh` into your deployment
+* Edit it, deleting or commenting out the steps you don't need
+
+#### Variables
+
+A full list of variables used in the scripts can be found in `setup/setup/variables.sh`. This script will only set the value of a variable if it wasn't previously set - this provides a facility for the deployment to set a few variables without having to provide the whole `variables.sh` file.
+
+Variables can be set as simple VARIABLE=value statements in `roles/variables` and will be loaded and exported as part of the role script (dogsbody.sh).
+
+##### Putting it LIVE
+
+By default the Let's Encrypt staging area is use which has extemely high limits and issues untrusted certs for dev purposes.
+
+To switch over to issuing live certs add ACME_TEST=false to `roles/variables`.
+
+It's strongly recommended you do at least one full deployment using the staging server and non-live domains (`deploy-test.<domain>` perhaps?) to make sure everything works before you start using the live servers which have some fairly tight limits you don't want to run afoul of.
 
 ## Organization
 
@@ -20,11 +80,11 @@ This repo is designed to be used as a sub-module of the repo containing the fina
 
 * `test_deployment` - an example deployment containing a Hello World app in actix-web. The only thing that will need to be changed is the domain in `haproxy/sites.lst` to one that points to your test machine. `vagrant-recreate-and-deploy-test.sh` can be used to create a new vagrant vm and deploy this test deployment to it so long as the mac address from Vagrantfile is configured to receive por 80 and 443 traffic.
 
-* `backup_deployment.sh` - maintenance script that will create a 7z archive of the setup folder and a provided deployment folder then optionally delete the original. This will create a snapshot of all the setup scripts and deployment specific files at this instant so the deployment can be recreated regardless of the current state of the setup scripts. 
+* `backup_deployment.sh` - maintenance script that will create a 7z archive of the setup folder and a provided deployment folder then optionally delete the original. This will create a snapshot of all the setup scripts and deployment specific files at this instant so the deployment can be recreated regardless of the current state of the setup scripts.
 
 * `deploy-test-deployment.sh` - example wrapper around `deploy.sh` that deploys the test_deployment to a target machine.
 
-* `deploy.sh` - rsyncs setup, utils and the provided deployment to a given address then runs the dogsbody role on the target machine. 
+* `deploy.sh` - rsyncs setup, utils and the provided deployment to a given address then runs the dogsbody role on the target machine.
 
 * `new-deployment.sh` - creates a new skeleton deployment optionally from a previous deployment. If there is no previous deployment or if the previous deployment doesn't contain a `dhparams.pem` file, one is created.
 
@@ -59,7 +119,7 @@ Configuration files, templates and other deployment artifacts
 
 * postgres
 
-    * `*.sql` - sql files used to create the postgres databases. Typically created by pg_dump with the -C option. The name of the file will be used to check if the database already exists so they must be named <database name>.sql.
+    * `*.sql` - sql files used to create the postgres databases. Typically created by pg_dump with the -C option. The name of the file will be used to check if the database already exists so they must be named `<database name>.sql`.
 
     * `roles.lst` - list of users/roles to create. These are created before attempting to execute the sql files.
 
@@ -76,10 +136,12 @@ Configuration files, templates and other deployment artifacts
 #### deploy
 
    * `acme-sh-sites.sh` - requests certificates from Let's Encrypt for each domain defined in `sites.lst` and, assuming they are issued, configures acme.sh to deploy these certs to the haproxy cert folder. `ACME_TEST` variable in `variables.sh` determines if the staging or live servers are used.
-    
+
    * `allow-port.sh` - allows a port through the firewall (not currently used).
 
-   * `haproxy-generate-dhparams.sh` - uses openssl to generate a new `dhparams.pem` file and overwrites the existing one in the haproxy config dir once the generation finishes. Generation can take 20+ minutes on a low spec VPS so it's suggested to generate one locally prior to deploying. `new-deployment.sh` will do this automatically if there is `dhparams.pem` in the base deployment (see `new-deployment.sh`for more details).
+   * `haproxy-generate-dhparams.sh` - wrapper around `generate-dhparams.sh` designed to be run as part of a deployment on the target machine. Generation can take 20+ minutes on a low spec VPS so it's suggested to generate one locally prior to deploying. `new-deployment.sh` will do this automatically if there is `dhparams.pem` in the base deployment (see `new-deployment.sh`for more details).
+
+   * `generate-dhparams.sh` - uses openssl to generate a new `dhparams.pem` file and moves it to the path provided.
 
    * `haproxy-global.sh` - uses `haproxy.cfg.template` and `sites.lst` to create and install the haproxy config (see those files above for more info).
 
@@ -88,7 +150,7 @@ Configuration files, templates and other deployment artifacts
    * `systemd-service.sh` - uses `system.template` to create a systemd service file for each user app. Replaces the service name, working directory, bin and user account then moves the service file to the app working directory before installing and starting the service.
 
    * `user-application.sh` - rsyncs the contents of a user application directory to a specified install location (I've been using /opt/apps/{app}), sets the ownership of the target location to the APP_ACCOUNT (defined in `variables.sh`) and runs `post-install.sh` if one exists in the app directory. Optionally overwrites the target location.
-   
+
 #### roles
 
   * `admin-user-creation.sh` - calls `setup/admin-user-creation.sh` after exporting the credentials from `variables`. Used mainly for local testing with vagrant. Usually setting up the admin user account and public key access will be done during first boot of the vm or via a web console. Could also be used if you are given root user ssh access.
@@ -96,62 +158,62 @@ Configuration files, templates and other deployment artifacts
   * `dogsbody.sh` - sets up everything these scripts can do. Starting place for deployments that don't need all the parts. See comments in the file for what each part does.
 
   * `variables` - minimum variables that need to be exported prior to creating the admin user account & configuring their SSH access.
-  
+
 #### setup
- 
+
   * `acme-sh.sh` - downloads the latest release from acmesh-offical repo and installs it under the root user.
-  
+
   * `admin-user-creation.sh` - creates the admin user USER_ACCOUNT with authorized ssh key USER_PUB_KEY.
-  
+
   * `app-user-creation.sh` - creates a service account for running user applications.
-  
+
   * `apt-functions.sh` - apt functions used for checking and installing dependencies.
-  
+
   * `base.sh` - installs some standard tools that other scripts (or the admin user) need.
-  
+
   * `cargo-install-bin.sh` - uses `cargo install` to install rust tools. See diesel.sh for example.
-  
+
   * `diesel.sh` - installs the diesel ORM cli tool for managing diesel migrations and various other admin functions.
-  
+
   * `firewall-functions.sh` - functions to add and remove firewall exceptions.
-  
+
   * `firewall.sh` - installs and configures firewall. Changes default incoming to deny and outgoing to allow. Adds allow rule for SSH if wireguard is not in use.
-  
+
   * `golang.sh` - downloads the latest stable golang release and installs it under /usr/local/go.
-  
+
   * `haproxy.sh` - adds the official haproxy ppa and installs haproxy. If haproxy wasn't previously installed it also overwrites the default config with `haproxy-acme-only.cfg`
-  
+
   * `hostname.sh` - changes the machines hostname, updates /etc/hosts and reboots. Does nothing if the hostname is unchanged. This must be run last because many things break if you change the hostname and don't reboot.
-  
+
   * `postgres.sh` - adds the official apt repo for postgres and installs postgres.
-  
+
   * `rust.sh` - downloads and installs the version of rust specified by RUST_VERSION and RUST_TARGET.
-  
+
   * `ssh-hardening.sh` - various common ssh hardening config changes.
-  
+
   * `variables.sh` - variables used by many of the scripts. They are only set if the variable was previously unset - this makes it possible to set them in the role script or other wrapper script.
-  
+
   * `wireguard.sh` - installs wireguard and generates config files. Requires `server_private_key` and `client_public_key` be present in the config/wireguard directory. See `create-wireguard-keys.sh` to create these.
-  
+
 ### utils
-   
+
    * `check-haproxy-abuse-stick-table.sh` - prints out the current contents of the haproxy abuse stick table.
 
    * `check-haproxy-config.sh` - checks that provided haproxy config file is valid.
-   
+
    * `clear-haproxy-abuse-stick-table.sh` - clears the haproxy abuse stick table.
-   
+
    * `create-wireguard-keys.sh` - creates wireguard keys in the provided deployment folder if they don't already exist.
-   
+
    * `dump-all-pg-databases.sh` - selects all non-system, non-template databases on the current system and dumps creation scripts for them using pg_dump. To be used on old server to migrate to new install. Output of this command can be directly placed in `config/postgres` ready for deployment. You'll have to handle `roles.lst` manually for now.
 
-* `variables.sh` - symlink to the main `variables.sh`.
+  * `variables.sh` - symlink to the main `variables.sh`.
 
 ## Things of note
 
 ### haproxy abuse handling
 
-The default haproxy configuration template has aggressive banning of abusive users. Abuse requests will be silently dropped - that is, the kernel will forget about the connection but won't tell the other side it has been closed. 
+The default haproxy configuration template has aggressive banning of abusive users. Abuse requests will be silently dropped - that is, the kernel will forget about the connection but won't tell the other side it has been closed.
 
 There are two mechanisms in place
 
@@ -161,7 +223,7 @@ There are two mechanisms in place
 
 ### wireguard 1:1
 
-The wireguard config has only been written with 1 client connecting to 1 server in mind. 
+The wireguard config has only been written with 1 client connecting to 1 server in mind.
 
 It is a low priority TODO item to make it possible to set up clusters of clients & servers all on the same virtual network.
 

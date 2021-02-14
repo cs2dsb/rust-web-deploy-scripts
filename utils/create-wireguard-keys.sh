@@ -9,8 +9,7 @@ set -o nounset
 # Exit when a piped command returns a non-zero exit code
 set -o pipefail
 
-cd "${BASH_SOURCE%/*}"
-source "./variables.sh"
+source "${BASH_SOURCE%/*}/variables.sh"
 
 if [ "$XTRACE" = true ]; then
     # Print every command for debugging

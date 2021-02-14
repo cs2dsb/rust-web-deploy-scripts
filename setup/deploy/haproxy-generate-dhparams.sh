@@ -26,10 +26,4 @@ fi
 
 apt_install openssl
 
-openssl dhparam -out dhparams.pem 4096
-if [ "$OUT_OVERRIDE" == "" ]; then
-    mkdir -p $HAPROXY_BASE
-    mv dhparams.pem "$HAPROXY_DHPARAMS"
-else
-    mv dhparams.pem "$OUT_OVERRIDE"
-fi
+"./generate-dhparams.sh" "$HAPROXY_DHPARAMS"

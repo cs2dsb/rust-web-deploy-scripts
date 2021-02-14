@@ -40,6 +40,9 @@ source "../setup/variables.sh"
 # acme needs to be configured first otherwise the haproxy config will try to load non-existent certs and error
 "../deploy/acme-sh-sites.sh"
 "../deploy/haproxy-global.sh"
+# This can be enabled to generate new params on the target but it's not advised due to how long it takes
+# suggest generating the file locally and not using this step
+# "../deploy/haproxy-generate-dhparams.sh"
 
 # Database: postgres, data restoration
 "../setup/postgres.sh"
