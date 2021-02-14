@@ -68,7 +68,7 @@ Variables can be set as simple VARIABLE=value statements in `roles/variables` an
 
 By default the Let's Encrypt staging area is used which has extemely high limits and issues untrusted certs for dev purposes.
 
-To switch over to issuing live certs add ACME_TEST=false to `roles/variables`.
+To switch over to issuing live certs add ACME_TEST=" " to `roles/variables`. You can also set ACME_TEST="--force" to force acme.sh to request new certs even if there are existing un-expired ones stored locally - this is useful for when you've already deployed using the staging server and want to now request live certs.
 
 It's strongly recommended you do at least one full deployment using the staging server and non-live domains (`deploy-test.<domain>` perhaps?) to make sure everything works before you start using the live servers which have some fairly tight limits you don't want to run afoul of.
 
@@ -81,6 +81,8 @@ The solution I've been using is to manual update the haproxy config on the old m
 To do this in haproxy you simply need to update the `backend acme_http` section to point to the new servers IP and port 80.
 
 So long as the live SSL certs aren't due to expire during the migration there should be no issue with this approach (as far as I can see... raise an issue to discuss if you see any problems). You can use `check-cert-expiry.sh` to quickly see how long is left on a cert for a given domain.
+
+You can use `curl -k --header "Host: <domain>" https:/<ip address>` to test the sites before
 
 ## Organization
 
