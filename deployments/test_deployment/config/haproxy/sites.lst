@@ -1,0 +1,7 @@
+# This list of sites is used by deploy scripts to:
+#
+# * create haproxy backends
+# * request ssl certs
+
+# host, ip, port
+helloworld.example.co.uk, 127.0.0.1, 1717

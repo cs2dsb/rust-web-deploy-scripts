@@ -1,0 +1,149 @@
+global
+	log /dev/log	local0 info
+	log /dev/log	local1 notice
+	log /dev/log	local2 info
+	chroot /var/lib/haproxy
+	stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+	stats timeout 30s
+	maxconn 200
+	tune.ssl.default-dh-param 4096
+	ssl-dh-param-file /etc/haproxy/dhparams.pem
+	nbthread 4
+	user haproxy
+	group haproxy
+	daemon
+
+	# Default SSL material locations
+	ca-base /etc/ssl/certs
+	crt-base /etc/ssl/private
+
+	# Default ciphers to use on SSL-enabled listening sockets.
+	# For more information, see ciphers(1SSL). This list is from:
+	#  https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+	# An alternative list with additional directives can be obtained from
+	#  https://mozilla.github.io/server-side-tls/ssl-config-generator/?server=haproxy
+	#ssl-default-bind-ciphers #ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS
+	#ssl-default-bind-options no-sslv3
+
+	# These are from the mozilla link given above. Modern profile
+	ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+	ssl-default-bind-options prefer-client-ciphers no-sslv3 no-tlsv10 no-tlsv11 no-tlsv12 no-tls-tickets
+	ssl-default-server-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+	ssl-default-server-options no-sslv3 no-tlsv10 no-tlsv11 no-tlsv12 no-tls-tickets
+
+defaults
+	log	global
+	#log-format "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r"
+
+	mode	http
+	option 	forwardfor
+	option 	http-server-close
+	option	httplog
+	option	dontlognull
+
+	# Slowloris mitigation
+	timeout http-request 5s
+	timeout connect 5s
+	timeout client 30s
+	timeout server 10s
+
+	errorfile 400 /etc/haproxy/errors/400.http
+	errorfile 403 /etc/haproxy/errors/403.http
+	errorfile 408 /etc/haproxy/errors/408.http
+	errorfile 500 /etc/haproxy/errors/500.http
+	errorfile 502 /etc/haproxy/errors/502.http
+	errorfile 503 /etc/haproxy/errors/503.http
+	errorfile 504 /etc/haproxy/errors/504.http
+
+listen stats
+	bind :10011
+	stats enable
+	stats uri /
+	stats hide-version
+
+frontend http
+	bind *:80
+
+	# Redirect based off the host only. For apex -> www, alt spellings, etc. Maintains request uri (path)
+	http-request redirect code 301 location https://%[hdr(host),map(/etc/haproxy/redirect_host.map)]%[capture.req.uri]?x=%[base] if { hdr(host),map(/etc/haproxy/redirect_host.map) -m found }
+
+	# Redirect based off full url (except protocol). Doesn't maintain uri (path)
+	http-request redirect code 301 location https://%[base,map(/etc/haproxy/redirect_host_path.map)] if { base,map(/etc/haproxy/redirect_host_path.map) -m found }
+
+	# Track client's source IP in abuse stick table
+	http-request track-sc0 src table abuse_stick_table
+
+	# Capture the host header
+	capture request header Host len 64
+
+	http-request add-header X-Forwarded-Proto http
+
+	# Handle ACME challenges
+	use_backend acme_http if { path_beg -i /.well-known/acme-challenge/ }
+
+	# Don't redirect abuse users
+	use_backend abuse_backend	if { sc0_http_err_cnt gt 10 }
+	use_backend abuse_backend	if { path_end -f /etc/haproxy/extension_blacklist.lst }
+
+	# If not ACME or abuse, send it to redirect
+	# This can be commented out if you want to allow http
+	use_backend https_redirect
+
+	# Generated use_backends from sites.lst
+	#TEMPLATE_ use_backend $backend if { hdr(host) $host }
+
+	default_backend unknown_host_backend
+
+frontend https
+	# Bind all certs in folder
+	bind *:443 ssl crt /etc/haproxy/certs alpn h2,http/1.1
+
+	# Redirect based off the host only. For apex -> www, alt spellings, etc. Maintains request uri (path)
+	http-request redirect code 301 location https://%[hdr(host),map(/etc/haproxy/redirect_host.map)]%[capture.req.uri]?x=%[base] if { hdr(host),map(/etc/haproxy/redirect_host.map) -m found }
+
+	# Redirect based off full url (except protocol). Doesn't maintain uri (path)
+	http-request redirect code 301 location https://%[base,map(/etc/haproxy/redirect_host_path.map)] if { base,map(/etc/haproxy/redirect_host_path.map) -m found }
+
+	# Track client's source IP in abuse stick table
+	http-request track-sc0 src table abuse_stick_table if !{ path_end -f /etc/haproxy/extension_whitelist.lst }
+
+	# Capture the host header
+	capture request header Host len 64
+
+	http-request add-header X-Forwarded-Proto https
+
+	http-response set-header X-Frame-Options DENY
+	http-response set-header X-XSS-Protection "1;mode=block"
+	http-response set-header Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'none';"
+	http-response set-header X-Content-Type-Options nosniff
+
+	use_backend abuse_backend	if { sc0_http_err_cnt gt 10 }
+	use_backend abuse_backend	if { path_end -f /etc/haproxy/extension_blacklist.lst }
+	use_backend acme_http		if { path_beg -i /.well-known/acme-challenge/ } #-i = case insensitive
+
+	# Generated use_backends from sites.lst
+	#TEMPLATE_ use_backend $backend if { hdr(host) $host }
+
+	default_backend unknown_host_backend
+
+backend https_redirect
+	http-request redirect code 301 scheme https
+
+backend abuse_backend
+	# Silently drop abusive users
+	http-request silent-drop
+
+backend abuse_stick_table
+	stick-table type ip size 100k expire 30m store http_err_cnt
+
+backend acme_http
+	default-server inter 1s fall 1 rise 1
+	server acme 127.0.0.1:8888 check maxconn 1
+
+backend unknown_host_backend
+	http-request deny deny_status 404
+
+
+# Generated backends from sites.lst
+#TEMPLATE_ #backend $backend\n#\tmode http\n#\tfullconn 10000\n#\terrorfile 503 /etc/haproxy/$host.http\n#\thttp-request set-log-level silent
+#TEMPLATE_ backend $backend\n\tserver server1 $ip:$port check

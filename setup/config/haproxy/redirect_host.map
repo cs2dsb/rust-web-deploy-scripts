@@ -1,0 +1,9 @@
+# These modify the host while maintaining the rest of the path. e.g:
+#
+# This is applied BEFORE redirect_host_path.map
+#
+# Example
+#
+# example.com www.example.com
+# example.co.uk www.example.com
+# www.example.co.uk www.example.com

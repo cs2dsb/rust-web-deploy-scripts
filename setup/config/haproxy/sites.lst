@@ -1,0 +1,6 @@
+# This list of sites is used by deploy scripts to:
+#
+# * create haproxy backends
+# * request ssl certs
+
+# host, ip, port

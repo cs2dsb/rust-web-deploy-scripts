@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -e
+
+cd "$(dirname "$0")"
+
+cargo test
+EXECUTABLE=`cargo build --release --message-format json \
+            | jq -n '[inputs] | add | .executable' \
+            | sed -e 's/^"//' -e 's/"$//'`
+
+cp "$EXECUTABLE" ..

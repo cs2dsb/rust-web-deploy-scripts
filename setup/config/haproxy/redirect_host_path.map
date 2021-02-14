@@ -1,0 +1,11 @@
+# These modify the whole base (host + path)
+#
+# This is applied AFTER redirect_host.map
+#
+# Be aware of trailing slashes, there's nothing in the config to
+# ignore/fix them so you likely need to add both if using this
+#
+# Example:
+#
+# www.example.com/robots.txt    www.example.com/picture-of-cat.jpg
+# www.example.com/posts/1       www.example.com/new-crm/post?id=1

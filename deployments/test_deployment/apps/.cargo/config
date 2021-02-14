@@ -1,0 +1,6 @@
+[build]
+# This was added to keep the target dir out of the deployment tree so vagrant doesn't
+# end up copying 2gb+ of intermediate artifacts up every provision
+# It probably makes more sense to keep the rust source entirely out of the deployment
+# folder but I wanted to have a complete example that works out of the box
+target-dir = "/tmp/cargo-deployment-target"

@@ -1,0 +1,8 @@
+[Interface]
+Address = 10.10.10.1/24
+ListenPort = {port}
+PrivateKey = {server_private_key}
+
+[Peer]
+PublicKey = {client_public_key}
+AllowedIPs = 10.10.10.2/32

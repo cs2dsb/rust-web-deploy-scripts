@@ -1,0 +1,16 @@
+[Unit]
+Description={name} service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+User={user}
+Group={user}
+WorkingDirectory={path}
+ExecStart={path}/{bin}
+StandardOutput=file:/var/log/{name}.log
+StandardError=file:/var/log/{name}.log
+
+[Install]
+WantedBy=multi-user.target

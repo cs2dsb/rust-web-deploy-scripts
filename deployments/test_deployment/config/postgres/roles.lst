@@ -1,0 +1,4 @@
+# Put CREATE ROLE lines here
+# Semicolon at the end is required
+
+# CREATE ROLE bob WITH LOGIN PASSWORD 'password1' SUPERUSER;
