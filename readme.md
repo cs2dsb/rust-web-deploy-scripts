@@ -72,6 +72,16 @@ To switch over to issuing live certs add ACME_TEST=false to `roles/variables`.
 
 It's strongly recommended you do at least one full deployment using the staging server and non-live domains (`deploy-test.<domain>` perhaps?) to make sure everything works before you start using the live servers which have some fairly tight limits you don't want to run afoul of.
 
+##### Live migrations
+
+The main issue with live migrations with these scripts is the Let's Encrypt cert config - during deployment the scripts expect domain renewals to work but of course this means having requests coming to this new box prior to it being set up.
+
+The solution I've been using is to manual update the haproxy config on the old machine to direct only acme requests to the new VM before running the deploy scripts on it.
+
+To do this in haproxy you simply need to update the `backend acme_http` section to point to the new servers IP and port 80.
+
+So long as the live SSL certs aren't due to expire during the migration there should be no issue with this approach (as far as I can see... raise an issue to discuss if you see any problems). You can use `check-cert-expiry.sh` to quickly see how long is left on a cert for a given domain.
+
 ## Organization
 
 This repo is designed to be used as a sub-module of the repo containing the final deployment. The scripts that copy the files onto the target machine copy the `setup` directory tree to the host first then overwrite it with the contents of the specific deployment. This way you can override any part of the setup procedure if necessary.
