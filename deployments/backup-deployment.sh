@@ -23,7 +23,7 @@ set -o nounset
 # Exit when a piped command returns a non-zero exit code
 set -o pipefail
 
-source "../setup/setup/apt-functions.sh"
+source "${BASH_SOURCE%/*}/../setup/setup/apt-functions.sh"
 
 sudo_apt_install 7z p7zip
 
@@ -43,7 +43,7 @@ fi
 rm -rf _backup
 mkdir _backup
 
-rsync -a --info=progress2 "../setup/" _backup
+rsync -a --info=progress2 "${BASH_SOURCE%/*}/../setup/" _backup
 rsync -a --info=progress2 "$NAME" _backup
 
 mkdir -p backups
